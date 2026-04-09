@@ -1,0 +1,177 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/aba_louvor_escalas/nextjs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Rede {
+  BRANCA
+  AMARELA
+  LARANJA
+  ROXA
+}
+
+enum Nivel {
+  EXPERIENTE
+  MEDIO
+  NOVO
+}
+
+model ConfigCultoEscala {
+  id              String   @id @default(cuid())
+  cultoId         String   @unique
+  slots           Json     @default("[]")
+  nivelBanda      String   @default("EQUILIBRADA")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  culto           Culto    @relation(fields: [cultoId], references: [id], onDelete: Cascade)
+
+  @@index([cultoId])
+}
+
+model InstrumentoConfig {
+  id        String   @id @default(cuid())
+  codigo    String   @unique
+  nome      String
+  ativo     Boolean  @default(true)
+  ordem     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([codigo])
+}
+
+model Culto {
+  id                 String              @id @default(cuid())
+  data               DateTime
+  especial           Boolean             @default(false)
+  redeResponsavel    Rede
+  descricao          String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  escalaVoluntarios  EscalaVoluntario[]
+  configEscala       ConfigCultoEscala?
+
+  @@index([data])
+}
+
+model Ausencia {
+  id            String      @id @default(cuid())
+  voluntarioId  String
+  dataInicio    DateTime
+  dataFim       DateTime?
+  motivo        String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  voluntario    Voluntario  @relation(fields: [voluntarioId], references: [id], onDelete: Cascade)
+
+  @@index([voluntarioId, dataInicio])
+}
+
+model Voluntario {
+  id                String              @id @default(cuid())
+  nome              String
+  dataNascimento    DateTime?
+  email             String              @unique
+  rede              Rede
+  qualGC            String?
+  discipulador      String?
+  instrumentos      String[]
+  ministro          Boolean             @default(false)
+  diretorCulto      Boolean             @default(false)
+  nivel             Nivel               @default(MEDIO)
+  ativo             Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  ausencias         Ausencia[]
+  escalas           EscalaVoluntario[]
+
+  @@index([email])
+  @@index([rede])
+}
+
+model Escala {
+  id                String              @id @default(cuid())
+  mes               Int
+  ano               Int
+  observacoes       String?             @db.Text
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  voluntarios       EscalaVoluntario[]
+
+  @@unique([mes, ano])
+  @@index([mes, ano])
+}
+
+model EscalaVoluntario {
+  id            String        @id @default(cuid())
+  escalaId      String
+  cultoId       String
+  voluntarioId  String
+  funcao        String
+  manual        Boolean       @default(false)
+  confirmado    Boolean       @default(false)
+  observacoes   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  escala        Escala        @relation(fields: [escalaId], references: [id], onDelete: Cascade)
+  culto         Culto         @relation(fields: [cultoId], references: [id], onDelete: Cascade)
+  voluntario    Voluntario    @relation(fields: [voluntarioId], references: [id], onDelete: Cascade)
+
+  @@unique([cultoId, funcao, escalaId])
+  @@index([escalaId])
+  @@index([cultoId])
+  @@index([voluntarioId])
+}
