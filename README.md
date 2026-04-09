@@ -111,7 +111,7 @@ nextjs_space/
 │ └── schema.prisma # Schema do banco de dados
 └── scripts/
 └── seed.ts # Dados iniciais
-
+ 
 
 ---
 
